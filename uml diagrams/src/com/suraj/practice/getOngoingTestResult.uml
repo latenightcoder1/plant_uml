@@ -1,0 +1,32 @@
+@startuml
+
+!include <elastic/elasticsearch/elasticsearch>
+
+title Get speed test results \n for table display
+
+actor "User" as user
+participant "Diagnostic \nService" as ds
+participant "NIS V2 \nService" as nis
+queue "<$elasticsearch> \nspeed-test-*" as index1
+queue "<$elasticsearch> \nbaseline-speed-test" as index2
+
+group get speed test results
+	user -> ds ++: GET  /operations/diagnostic/speed-test/{serialNo}/results
+	group get baseline result
+		ds -> nis ++ : get device details against serial no
+		nis -> ds --
+		ds -> ds : perform basic validation
+		ds -> index2 ++ : get baseline result
+		index2 -> ds -- : fetched baseline result
+		ds -> ds : map to client\nreturnable object
+	end
+	group get last 5 speed test results\nexcluding baseline
+		ds -> index1 ++ : get speed test result documents\n against passed serialNo
+		index1 -> ds -- : fetched the speed test result documents
+		ds -> ds : map to client\nreturnable object
+	end
+	ds -> user --
+	note left: response body {\n"data": [{\n "operationId": "bf4fdd4b-4602-41b5-93b4-4be11d4e2e82",\n "timestamp": 1649927821772,\n "downlinkThroughput": 96679,\n "uplinkThroughput": 96818,\n "downlinkSnr": 23.56969,\n "uplinkSnr": 24.365898,\n "pathloss": 79.17959,\n ....,\n "serialNo": "oneplus1",\n "userEmail": "neel.rath@taranawireless.com",\n  "isBaseline": true\n},{\n "operationId": "bf4fdd4b-4602-41b5-93b4-4be11d4e2e83",\n "timestamp": 1649927821773,\n "downlinkThroughput": 96679,\n "uplinkThroughput": 96818,\n "downlinkSnr": 23.56969,\n "uplinkSnr": 24.365898,\n "pathloss": 79.17959,\n ....,\n "serialNo": "oneplus1",\n "userEmail": "neel.rath@taranawireless.com",\n  "isBaseline": false\n}],\n"error": null\n}
+end
+
+@enduml

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Copy element &apos;startSpeedTest.uml&apos; to &apos;uml diagrams/src/com.suraj.practice&apos;&#x0D;&#x0A;- Original project: &apos;uml diagrams&apos;&#x0D;&#x0A;- Destination element: &apos;uml diagrams/src/com.suraj.practice&apos;&#x0D;&#x0A;- Original element: &apos;startSpeedTest.uml&apos;" description="Copy file" destination="/src&lt;com.suraj.practice" element1="src/com/suraj/practice/startSpeedTest.uml" files="1" flags="589830" folders="0" id="org.eclipse.jdt.ui.copy" policy="org.eclipse.jdt.ui.copyResources" stamp="1650863348629" units="0" version="1.0"/>
+</session>

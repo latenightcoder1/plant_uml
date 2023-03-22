@@ -1,0 +1,34 @@
+@startuml
+
+!include <elastic/elasticsearch/elasticsearch>
+
+title Change / Set baseline
+
+actor "User" as user
+participant "Diagnostic \nService" as ds
+participant "NIS V2 \nService" as nis
+queue "<$elasticsearch> \nspeed-test-*" as index1
+queue "<$elasticsearch> \nbaseline-speed-test" as index2
+
+group change/set baseline
+	user -> ds ++: PUT  /operations/diagnostic/speed-test\n/{serialNo}/{operationId}/baseline
+		group basic device validation\n existance, deviceType
+			ds -> nis ++ : get device details against serial no
+			nis -> ds --
+			ds -> ds : perform basic validation
+	    end
+		ds -> index1 ++ : Get speed test result document\nagainst passed operationId
+		index1 -> ds -- : Returns available document
+		ds -> ds : perform validation
+		group update baseline
+			ds -> index2 ++ : delete previous baseline
+			index2 -> ds
+			ds -> index2 ++ : index new baseline
+			index2 -> ds
+		end 
+	ds -> user --
+	note left: response body {\n "data": { \n "telemetryData": {\n  uplinkSnr": 24.365898,\n  .....\n },\n "downlinkTestResult": {\n  "throughputKbps": 96679,\n  .......\n },\n "uplinkTestResult": {\n  "throughputKbps": 96818,\n  ........\n  },\n "timeCreated": 1649927821772,\n "serialNo": "oneplus1",\n "bnSerialNo": "oneplus",\n "baselineSelectedTime": 1649927927581,\n "operationId": "opId",\n "userEmail": "a@x.com"\n },\n"error": null\n}
+	
+end
+
+@enduml

@@ -1,0 +1,36 @@
+@startuml
+!include <cloudinsight/kafka>
+!include <elastic/elasticsearch/elasticsearch>
+
+title Hard pinning Device config service flow
+
+queue "<$kafka> \nNETWORK" as kafka
+participant "DeviceConfig\nService" as dcs
+participant "NIS V2 \nService" as nis
+database "Mongo\ntcs database" as db
+participant "SWF domain:\ndevice-config-*" as swf
+participant "Device" as device
+queue "<$elasticsearch> \nv2_events-*" as event
+
+group Operator Config Changed Message Processing
+	kafka <-- dcs : reads message:\n OperatorConfigChanged
+	dcs -> nis ++ : getOperatorDevices(operatorId=operatorId, type=BN)
+	nis -> dcs --: List<DeviceDetails> bns
+	loop bns.size() times
+		dcs -> db ++: writes operations and configurations documents
+		db -> dcs --
+		dcs --> event: writes SET_CONFIG_INITIATED event
+	    dcs -> swf : submits set config workflow
+	end
+end
+
+... ...
+group executeWorkflow
+	swf <-- dcs : picks workflow
+	dcs -> device ++ : gnmi set request\n({key1=/connections/global/config/primary-network-search-timeout,value1=900}\n{key2=a, value2=a}{key3=b,value3=b})
+	device -> dcs --
+	dcs -> db ++: updates operations document
+	db -> dcs --
+	dcs --> event: writes SET_CONFIG_SUCCEEDED/FAILED event
+end
+@enduml

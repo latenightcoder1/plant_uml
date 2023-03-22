@@ -1,0 +1,29 @@
+@startuml
+
+!include <elastic/elasticsearch/elasticsearch>
+
+title Get speed test result for\n an in-progress / complete test
+
+actor "User" as user
+participant "Diagnostic \nService" as ds
+participant "NIS V2 \nService" as nis
+queue "<$elasticsearch> \nspeed-test-*" as index2
+
+group get speed test\npartail / complete result
+	user -> ds ++: GET  /operations/diagnostic/speed-test/{serialNo}/{operationId}/result
+	group basic device validation\n existance, deviceType
+		ds -> nis ++ : get device details against serial no
+		nis -> ds --
+		ds -> ds : perform basic validation
+	end
+	group get speed test result document\nmap to client returnable object
+		ds -> index2 ++ : get speed test result document\n against passed operation id
+		index2 -> ds -- : fetched the speed test result document
+		ds -> ds : perform some validation\n operation and device matching
+		ds -> ds : map to client\nreturnable object
+	end
+	ds -> user --
+	note left: response body {\n"data": {\n "operationId": "bf4fdd4b-4602-41b5-93b4-4be11d4e2e82",\n "timestamp": 1649927821772,\n "downlinkThroughput": 96679,\n "uplinkThroughput": 96818,\n "downlinkSnr": 23.56969,\n "uplinkSnr": 24.365898,\n "pathloss": 79.17959,\n ....,\n "serialNo": "oneplus1",\n "userEmail": "neel.rath@taranawireless.com",\n  "isBaseline": false\n},\n"error": null\n}
+end
+
+@enduml

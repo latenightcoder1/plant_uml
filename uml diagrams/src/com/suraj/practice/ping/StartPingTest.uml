@@ -1,0 +1,38 @@
+@startuml
+!include <cloudinsight/kafka>
+
+title Ping Test from A BN\n
+
+actor "User" as user
+box "Diagnostic \nService"
+participant "Network\nTroubleshoot\nResource" as ntr
+participant "Network\nTroubleshoot\nComponent" as ntc
+participant "Device\nOperations\nRepository" as dor
+participant "Network\nTroubleshoot\nOperation\nMapper" as ntm
+participant "Event\nLogger" as el
+end box
+participant "NIS V2 \nService" as nis
+participant "Device" as device
+queue "<$kafka> \nEVENTS" as kafka
+
+group Start Ping Test
+	user -> ntr ++: POST\n/V1/operations/network-\ntroubleshoot/ping/start
+	note left: startPingTestRequest \n { \n "serialNumber":"oneplus",\n  destination":"google.com",\n  "count":5 \n }
+		ntr -> ntc ++: startPingTest(startPingTestRequest)
+			ntc -> ntc : validate>>\nnot null serialNumber\nand destination
+			ntc -> nis ++: getDeviceDetails(serialNumber)
+			nis -> ntc --: DeviceDetails
+			ntc -> ntc : validate authentication,\nauthorization\nand deviceType
+			ntc -> dor ++: startPingTest(ip, port, serialNumber,\ntransportSecurity, startPingTestRequest)
+				dor -> device ++: tnoiServiceClient.startMgmtPlaneTest(request)
+				device -> dor --: StartMgmtPlaneTestResponse
+			dor -> ntc --: StartMgmtPlaneTestResponse
+			ntc -> ntm ++: buildStartPingTestResult(startPingTestResponse,\n startPingTestRequest, ipAndPortDetailsPair)
+			ntm -> ntc --: StartPingTestResult
+			ntc -> el : logPingTestEvent(PING_TEST_INITIATED,\nstartPingTestResult, deviceDetails,\nuser, errorMessage)
+				el -> kafka : eventProducerTemplate.send(event)
+		ntc -> ntr --: StartPingTestResult
+	ntr -> user --: StartPingTestResultResponse
+	note left:  { \n "data":{ \n  "operationId":"123",\n  "testStatus":"STATUS_OK"\n  "serialNumber":"oneplus",\n   destination":"google.com",\n   "count":5,\n   deviceIP":"1.2.3.4",\n   devicePort":"1234"\n  }, \n"error": null\n}	
+end
+@enduml

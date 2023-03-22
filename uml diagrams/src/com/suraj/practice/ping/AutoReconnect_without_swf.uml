@@ -1,0 +1,42 @@
+@startuml
+!include <elastic/elasticsearch/elasticsearch>
+
+title Primary BN Auto-reconnect\nwithout SWF\n
+
+participant "DeviceMessageListener\n>>onDeviceMessage\n(String message,\n Acknowledgment acknowledgment)" as dml
+participant "PrimaryBnReconnect\nProcessor" as pbrp
+participant "primaryBnReconnect\nExecutor" as pbre
+participant "Worker Threads \nThreadpool" as wt
+participant "AdvancedOperation\nDbRepository" as aodr
+participant "NetworkInfoService\nRepository" as nisr
+participant "DeviceOperations\nRepository" as dor
+participant "EventLogger" as el
+
+
+group reconnectRns
+	dml -> pbrp ++: reconnectRns(String serialNumber)
+		pbrp -> pbrp : createConfigDetailsMap()
+		note left: Map.of("/radios/global/config/reset",\nConfigDetails(appliedAt="ApplicableTarget.SELF"\n,PathValue=PathValue(value=2, valueType=INT))
+		pbrp -> nisr ++ : get all the rns against a primary bn and not connected to it
+		nisr -> pbrp -- : List<DeviceDetails> rnDetailsList
+		loop rnDetailsList.size() times
+	    	pbrp -> pbre : submit >>\n processReconnectRequest\n(context, user, deviceDetails,\n configDetailsMap)
+	    	pbre -> pbrp : Future<OperationDbEntity>\n primaryBnReconnectFuture
+		end
+		loop primaryBnReconnectFutureList.size() times
+	    	wt -> pbre : picks >> processReconnectRequest\n(context, user,\n deviceDetails, configDetailsMap)
+	    	wt -> pbrp : OperationDbEntity
+		end
+	pbrp -> dml -- : List<OperationDbEntity>
+end
+... ...
+group processReconnectRequest(context, user, deviceDetails, configDetailsMap)
+	wt -> pbrp ++: executes >>\n processReconnectRequest(context, user, deviceDetails, configDetailsMap)
+		pbrp -> pbrp : createOperationDbEntity\n(deviceDetails, configDetailsMap)
+		note left: OperationDbEnityt {}
+		pbrp -> dor : setConfiguration(ipPortPair.getLeft(), ipPortPair.getRight(),deviceDetails.getSerialNumber(), deviceDetails.getTransportSecurity(), configDetailsMap)
+		pbrp -> aodr : saveOperation(operationDbEntity)
+		pbrp -> el : logEvent(eventName, deviceDetails, operationDbEntity, user, context)
+	pbrp -> wt -- : OperationDbEntity
+end
+@enduml

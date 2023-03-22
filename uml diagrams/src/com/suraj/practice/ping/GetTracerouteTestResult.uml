@@ -1,0 +1,32 @@
+@startuml
+
+title Get Traceroute Test Result\n
+
+actor "User" as user
+box "Diagnostic \nService"
+participant "Network\nTroubleshoot\nResource" as ntr
+participant "Network\nTroubleshoot\nComponent" as ntc
+participant "Device\nOperations\nRepository" as dor
+participant "Network\nTroubleshoot\nOperation\nMapper" as ntm
+end box
+participant "NIS V2 \nService" as nis
+participant "Device" as device
+
+group Get Traceroute Test Result
+	user -> ntr ++: GET\n/V1/operations/network-troubleshoot\n/traceroute/results?serialNumber=\noneplus&operationId=123
+		ntr -> ntc ++: getTracerouteTestResult(operationId, serialNumber)
+			ntc -> ntc : validate>>\nnot null serialNumber\nand operationId
+			ntc -> nis ++: getDeviceDetails(serialNumber)
+			nis -> ntc --: DeviceDetails
+			ntc -> ntc : validate authentication,\nauthorization
+			ntc -> dor ++: getTracerouteTestResult(ip, port, serialNumber,\ntransportSecurity, operationId)
+				dor -> device ++: tnoiServiceClient.getMgmtPlaneTestResult(operationId)
+				device -> dor --: GetMgmtPlaneTestResultResponse
+			dor -> ntc --: GetMgmtPlaneTestResultResponse
+			ntc -> ntm ++: buildGetTracerouteTestResult(getMgmtPlaneTestResultResponse,\n serialNumber, ipAndPortDetailsPair)
+			ntm -> ntc --: GetTracerouteTestResult
+		ntc -> ntr --: GetTracerouteTestResult
+	ntr -> user --: GetTracerouteTestResultResponse
+	note left:  {"data":\n	{\n	"operationId":"string",\n	"testStatus":"string",\n	"deviceIp":"string",\n	"devicePort":0,\n	"source":"string",\n	"destination":"string",\n	"traceroutePacketResults":\n	[{\n	"destinationName":"string",\n	"destinationAddress":"string",\n	"hops":0,\n	"packetSize":0,\n	"hop":0,\n	"address":"string",\n	"name":"string",\n	"rttNanos":0,\n	"state":"string",\n	"icmpCode":0,\n	"mplsMap":\n	{\n	"additionalProp1":"string",\n	"additionalProp2":"string",\n	"additionalProp3":"string"\n	},\n	"asPathList":[0]\n	}]\n	},\n "error":null\n}	
+end
+@enduml

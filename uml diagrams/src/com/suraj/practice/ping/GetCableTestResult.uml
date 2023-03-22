@@ -1,0 +1,32 @@
+@startuml
+
+title Get Cable Test Result\n
+
+actor "User" as user
+box "Diagnostic \nService"
+participant "Network\nTroubleshoot\nResource" as ntr
+participant "Network\nTroubleshoot\nComponent" as ntc
+participant "Device\nOperations\nRepository" as dor
+participant "Network\nTroubleshoot\nOperation\nMapper" as ntm
+end box
+participant "NIS V2 \nService" as nis
+participant "Device" as device
+
+group Get Cable Test Result
+	user -> ntr ++: GET\n/V1/operations/network-troubleshoot\n/cable-test/results?serialNumber=\noneplus1&operationId=123
+		ntr -> ntc ++: getCableTestResult(operationId, serialNumber)
+			ntc -> ntc : validate>>\nnot null serialNumber\nand operationId
+			ntc -> nis ++: getDeviceDetails(serialNumber)
+			nis -> ntc --: DeviceDetails
+			ntc -> ntc : validate authentication,\nauthorization
+			ntc -> dor ++: getCableTestResult(ip, port, serialNumber,\ntransportSecurity, operationId)
+				dor -> device ++: tnoiServiceClient.getCableTestResult(operationId)
+				device -> dor --: GetCableTestResultResponse
+			dor -> ntc --: GetCableTestResultResponse
+			ntc -> ntm ++: buildGetCableTestResult(getCableTestResultResponse,\n serialNumber, ipAndPortDetailsPair)
+			ntm -> ntc --: GetCableTestResult
+		ntc -> ntr --: GetCableTestResult
+	ntr -> user --: GetCableTestResultResponse
+	note left:  {\n "data":\n	{\n	"operationId":"string",\n	"testStatus":"string",\n	"deviceIp":"string",\n	"devicePort":0,\n	"serialNumber":"string",\n	"cableTestResults":\n	[{\n	"state":"string",\n	"differentialPair":"string",\n	"faultDistanceMeter":0\n	}]\n	},\n "error":null\n}	
+end
+@enduml

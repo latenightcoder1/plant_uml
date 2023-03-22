@@ -1,0 +1,25 @@
+@startuml
+
+!include <cloudinsight/kafka>
+
+title Association of a BN to a Sector\n
+
+participant "NIS \nService" as nis
+queue "<$kafka> \nDEVICE" as device
+queue "<$kafka> \nDEVICE_ENDPOINT" as deviceEndpoint
+participant "Device Config\nService" as dcs
+entity "BN" as bn
+
+group isDeviceConnected : true
+	nis --> device : writes message: DeviceConnected
+	dcs --> device : reads message: DeviceConnected
+	dcs -> bn : pushDeviceInitialConfiguration
+end
+
+group isBn && reachable : true
+	nis --> deviceEndpoint : writes message: DeviceReachable
+	dcs --> deviceEndpoint : reads message: DeviceReachable
+	dcs -> bn : pushDeviceInitialConfiguration
+end
+
+@enduml

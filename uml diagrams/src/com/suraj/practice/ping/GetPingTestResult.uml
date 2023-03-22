@@ -1,0 +1,32 @@
+@startuml
+
+title Get Ping Test Result\n
+
+actor "User" as user
+box "Diagnostic \nService"
+participant "Network\nTroubleshoot\nResource" as ntr
+participant "Network\nTroubleshoot\nComponent" as ntc
+participant "Device\nOperations\nRepository" as dor
+participant "Network\nTroubleshoot\nOperation\nMapper" as ntm
+end box
+participant "NIS V2 \nService" as nis
+participant "Device" as device
+
+group Get Ping Test Result
+	user -> ntr ++: GET\n/V1/operations/network-troubleshoot\n/ping/results?serialNumber=\noneplus&operationId=123
+		ntr -> ntc ++: getPingTestResult(operationId, serialNumber)
+			ntc -> ntc : validate>>\nnot null serialNumber\nand operationId
+			ntc -> nis ++: getDeviceDetails(serialNumber)
+			nis -> ntc --: DeviceDetails
+			ntc -> ntc : validate authentication,\nauthorization
+			ntc -> dor ++: getPingTestResult(ip, port, serialNumber,\ntransportSecurity, operationId)
+				dor -> device ++: tnoiServiceClient.getMgmtPlaneTestResult(operationId)
+				device -> dor --: GetMgmtPlaneTestResultResponse
+			dor -> ntc --: GetMgmtPlaneTestResultResponse
+			ntc -> ntm ++: buildGetPingTestResult(getMgmtPlaneTestResultResponse,\n serialNumber, ipAndPortDetailsPair)
+			ntm -> ntc --: GetPingTestResult
+		ntc -> ntr --: GetPingTestResult
+	ntr -> user --: GetPingTestResultResponse
+	note left:  {\n "data":\n	{\n	"operationId":"string",\n	"testStatus":"string",\n	"count":0,\n	"deviceIp":"string",\n	"devicePort":0,\n	"avgTimeNanos":0,\n	"bytesReceived":0,\n	"maxTimeNanos":0,\n	"packetsReceived":0,\n	"minTimeNanos":0,\n	"packetsSent":0,\n	"sequence":0,\n	"source":"string",\n	"destination":"string",\n	"stdDev":0,\n	"roundTripTimeNanos":0,\n	"ttlNanos":0\n	},\n "error":null\n}	
+end
+@enduml

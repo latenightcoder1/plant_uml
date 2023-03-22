@@ -1,0 +1,43 @@
+@startuml
+
+!include <elastic/elasticsearch/elasticsearch>
+!include <cloudinsight/kafka>
+
+title Stop speed test\n
+
+actor "User" as user
+participant "Diagnostic \nService" as ds
+participant "NIS V2 \nService" as nis
+database "MySql \ndiagnostic_operation" as tableDO
+participant "Amazon SWF\nService" as swf
+participant "Device" as device
+queue "<$elasticsearch> \nSPEED-TEST-*" as index
+queue "<$kafka> \nEVENTS" as kafka
+
+group stopSpeedTest
+	user -> ds ++: POST /operations/diagnostic/speed-test/{operationId}/stop
+		ds -> tableDO ++ : get operation details\nagainst operationId
+		tableDO -> ds --
+		ds -> nis ++ : get device details\nagainst serialNo stored\nin operations table
+		nis -> ds --
+		
+		group isOperationNotTerminated
+			ds -> swf ++ : terminate workflow execution
+			swf -> ds --
+			ds -> device ++ : stop link diagnostic
+			device -> ds --
+			ds -> device ++ : get connection test result
+			device -> ds --
+			ds -> tableDO ++ : update diagnostic operation entry
+			tableDO -> ds --
+			ds -> index ++ : update speed test result document
+			index -> ds --
+	    	ds -> kafka ++ : writes speed test stopped to\n EVENTS topic
+		end
+		ds -> ds : get speed test operation\ndetails from operation
+	ds -> user --
+	note left: response body { \n "data": [ \n{\n"deviceId": "tarana:oneplus1",\n"operationId": "bf4fdd4b-4602-41b5-93b4-4be11d4e2e82",\n "diagnosticOperationStatus": "STOPPED",\n"deviceOperationStatus": "STOPPED BY USER",\n"startTimeMillis": 1649927821772,\n"endTimeMillis": 1650862679611\n}\n],\n"error": null\n}
+	
+end
+
+@enduml

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="MavenProjectImportWizardPage">
+		<list key="rootDirectory">
+			<item value="C:\Users\suraj kumar\Downloads\abcd\6b6d392f-fb34-42a5-b866-eb9247a888cd\FurnitureFactory"/>
+			<item value="C:\Users\suraj kumar\Downloads\6b_6d_392f_fb34_42a5_b866_eb9247a888cd_master"/>
+			<item value="C:\Users\suraj kumar\new_code_repo\diagnostic"/>
+			<item value="C:\Users\suraj kumar\new_code_repo\network-health"/>
+		</list>
+		<list key="projectNameTemplate">
+			<item value="[artifactId]"/>
+			<item value="[artifactId]-TRUNK"/>
+			<item value="[artifactId]-[version]"/>
+			<item value="[groupId].[artifactId]"/>
+			<item value="[groupId].[artifactId]-[version]"/>
+			<item value="[name]"/>
+		</list>
+	</section>
+	<section name="org.eclipse.m2e.core.pom.overview">
+		<list key="ciManagementUrl">
+		</list>
+		<list key="ciManagementSystem">
+		</list>
+		<list key="issueManagementSystem">
+		</list>
+		<list key="issueManagementUrl">
+		</list>
+	</section>
+	<section name="org.eclipse.m2e.core.pom.dependencies">
+	</section>
+</section>

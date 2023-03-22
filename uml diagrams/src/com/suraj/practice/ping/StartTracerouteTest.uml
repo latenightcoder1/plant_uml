@@ -1,0 +1,38 @@
+@startuml
+!include <cloudinsight/kafka>
+
+title Start Traceroute Test\n
+
+actor "User" as user
+box "Diagnostic \nService"
+participant "Network\nTroubleshoot\nResource" as ntr
+participant "Network\nTroubleshoot\nComponent" as ntc
+participant "Device\nOperations\nRepository" as dor
+participant "Network\nTroubleshoot\nOperation\nMapper" as ntm
+participant "Event\nLogger" as el
+end box
+participant "NIS V2 \nService" as nis
+participant "Device" as device
+queue "<$kafka> \nEVENTS" as kafka
+
+group Start Traceroute Test
+	user -> ntr ++: POST\n/V1/operations/network-\ntroubleshoot/traceroute/start
+	note left: startTracerouteTestRequest \n { \n "serialNumber":"oneplus",\n  destination":"google.com" \n }
+		ntr -> ntc ++: startTracerouteTest(startTracerouteTestRequest)
+			ntc -> ntc : validate>>\nnot null serialNumber\nand destination
+			ntc -> nis ++: getDeviceDetails(serialNumber)
+			nis -> ntc --: DeviceDetails
+			ntc -> ntc : validate authentication,\nauthorization\nand deviceType
+			ntc -> dor ++: startTracerouteTest(ip, port, serialNumber,\ntransportSecurity, startTracerouteTestRequest)
+				dor -> device ++: tnoiServiceClient.startMgmtPlaneTest(request)
+				device -> dor --: StartMgmtPlaneTestResponse
+			dor -> ntc --: StartMgmtPlaneTestResponse
+			ntc -> ntm ++: buildStartTracerouteTestResult(startTracerouteTestResponse,\n startTracerouteTestRequest, ipAndPortDetailsPair)
+			ntm -> ntc --: StartTracerouteTestResult
+			ntc -> el : logTracerouteTestEvent(TRACEROUTE_TEST_INITIATED,\nstartTracerouteTestResult, deviceDetails,\nuser, errorMessage)
+				el -> kafka : eventProducerTemplate.send(event)
+		ntc -> ntr --: StartTracerouteTestResult
+	ntr -> user --: StartTracerouteResultResponse
+	note left:  { \n "data":{ \n  "operationId":"123",\n  "testStatus":"STATUS_OK"\n  "serialNumber":"oneplus",\n   destination":"google.com",\n   deviceIP":"1.2.3.4",\n   devicePort":"1234"\n  }, \n"error": null\n}	
+end
+@enduml

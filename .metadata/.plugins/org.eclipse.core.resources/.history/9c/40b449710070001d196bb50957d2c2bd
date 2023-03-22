@@ -1,0 +1,50 @@
+@startuml
+!include <elastic/elasticsearch/elasticsearch>
+
+title Primary BN Auto-reconnect\n N (RNs) Workflows\n
+
+participant "DeviceMessageListener\n>>onDeviceMessage\n(String message,\n Acknowledgment acknowledgment)" as dml
+participant "PrimaryBnReconnect\nProcessor" as pbrp
+participant "SWF\ndomain=device-config-*" as swf
+participant "PrimaryBnReconnect\nWorkflowImpl" as workflowThread
+participant "PrimaryBnReconnect\nActivitiesImpl" as taskThread
+participant "PrimaryBnReconnect\nWorkflowComponent" as pbrwc
+participant "AdvancedOperation\nDbRepository" as aodr
+participant "NetworkInfoService\nRepository" as nisr
+participant "DeviceOperations\nRepository" as dor
+participant "EventLogger" as el
+
+
+group reconnectRns
+	dml -> pbrp ++: reconnectRns(String serialNumber)
+		pbrp -> pbrp : basic validation\nincluding device state etc
+		pbrp -> pbrwc : createConfigDetailsMap()
+		pbrp -> nisr ++ : get all the rns against a primary bn and not connected to it
+		nisr -> pbrp -- : List<DeviceDetails> rnDetailsList
+		loop rnDetailsList.size() times
+			pbrp -> pbrp : createOperationDbEntity\n(deviceDetails, configDetailsMap)
+			note left: OperationDbEnityt {}
+			pbrwc -> dor : setConfiguration(ipPortPair.getLeft(), ipPortPair.getRight(),\ndeviceDetails.getSerialNumber(), deviceDetails.getTransportSecurity(),\n configDetailsMap)
+			pbrwc -> aodr : saveOperation\n(operationDbEntity)
+			pbrwc -> el : logEvent(eventName, deviceDetails, operationDbEntity, user, context)
+		end
+		pbrp -> swf : submit workflow:\nprimaryBnReconnectWorkflowClient-\nExternal.start(serialNumber)
+end
+... ...
+group executeWorkflow
+	swf <-- workflowThread : primaryBnReconnectWorkflowImpl\n.start(String serialNumber)
+		workflowThread -> taskThread ++ : primaryBnReconnectActivitiesClient\n.connectToPrimaryBn(serialNumber)
+		taskThread -> pbrwc ++ : connectToPrimaryBn(serialNumber)
+		pbrwc -> pbrwc : createConfigDetailsMap()
+		note left: Map.of("/radios/global/config/reset",\nConfigDetails(appliedAt="ApplicableTarget.SELF"\n,PathValue=PathValue(value=2, valueType=INT))
+		pbrwc -> nisr ++ : get all the rns against a primary bn and not connected to it
+		nisr -> pbrwc -- : List<DeviceDetails> rnDetailsList
+		loop rnDetailsList.size() times
+			pbrwc -> pbrwc : createOperationDbEntity\n(deviceDetails, configDetailsMap)
+			note left: OperationDbEnityt {}
+			pbrwc -> dor : setConfiguration(ipPortPair.getLeft(), ipPortPair.getRight(),\ndeviceDetails.getSerialNumber(), deviceDetails.getTransportSecurity(),\n configDetailsMap)
+			pbrwc -> aodr : saveOperation\n(operationDbEntity)
+			pbrwc -> el : logEvent(eventName, deviceDetails, operationDbEntity, user, context)
+		end
+end
+@enduml

@@ -1,0 +1,19 @@
+@startuml
+
+title Create a sector\n
+
+actor "User" as user
+participant "NIS \nService" as nis
+database "Postgresql \nSector" as tableSector
+
+group addSector
+	user -> nis ++: POST /tni/v2/sectors
+	note left: payload \n ... \n ... \n rNTransmitPower \n bNTransmitPower
+		nis -> tableSector ++ : add sector Details
+		note right: columns \n ...\n ... \n rn_transmit_power \n bn_transmit_power
+		tableSector -> nis --
+	nis -> user --
+	note left: response body \n ... \n ... \n rNTransmitPower \n bNTransmitPower
+end
+
+@enduml

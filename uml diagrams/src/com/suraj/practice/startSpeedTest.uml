@@ -1,0 +1,36 @@
+@startuml
+
+!include <elastic/elasticsearch/elasticsearch>
+
+title Start speed test\n
+
+actor "User" as user
+participant "Diagnostic \nService" as ds
+participant "NIS V2 \nService" as nis
+database "MySql \ndiagnostic_operation" as tableDO
+queue "<$elasticsearch> \nSPEED-TEST-*" as index
+participant "Amazon SWF\nService" as swf
+
+group startSpeedTest
+	user -> ds ++: POST /operations/diagnostic/speed-test/start
+	note left: payload \n { \n "rnDeviceIds": ["tarana:oneplus1"] \n }
+		ds -> ds : validate speed test\n request payload
+		ds -> ds : map speed test request\nto linkdiagnostic request
+		loop rnDeviceIds.length times
+	    	ds -> nis ++ : authentication and \nget device details
+	    	nis -> ds --
+	    	ds -> ds : create diagnostic operation
+			ds -> tableDO ++ : save diagnostic operation
+			tableDO -> ds --
+			ds -> ds : create skeleton speed test\nresult document
+			ds -> index ++ : add skeleton speed test result document
+			index -> ds --
+			ds -> swf ++ : submit workflow\nwith swf service
+			ds -> ds : map diagnostic operation\n to client returnable object
+		end
+	ds -> user --
+	note left: response body { \n "data": [ \n{\n"deviceId": "tarana:oneplus1",\n"operationId": "bf4fdd4b-4602-41b5-93b4-4be11d4e2e82",\n "diagnosticOperationStatus": "QUEUED",\n"deviceOperationStatus": "STATUS_UNKNOWN",\n"startTimeMillis": 1649927821772,\n"endTimeMillis": null\n}\n],\n"error": null\n}
+	
+end
+
+@enduml

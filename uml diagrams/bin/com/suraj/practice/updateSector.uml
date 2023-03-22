@@ -1,0 +1,34 @@
+@startuml
+
+!include <cloudinsight/kafka>
+
+title Update a sector\n
+
+actor "User" as user
+participant "NIS \nService" as nis
+database "Postgresql \nSector" as tableSector
+queue "<$kafka> \nNetwork" as kafka
+participant "Device Config\nService" as dcs
+entity "BN" as bn
+
+group updateSector
+	user -> nis ++: PUT /tni/v2/sectors
+	note left: payload \n ... \n ... \n rNTransmitPower \n bNTransmitPower
+		nis -> tableSector ++ : add sector Details
+		note right: columns \n ...\n ... \n rn_transmit_power \n bn_transmit_power
+		tableSector -> nis --
+		    group isSectorConfigChanged : true
+				nis --> kafka : writes message: SectorConfigChanged
+				dcs --> kafka : reads message: SectorConfigChanged
+				group isBnTransmitPowerChanged : true
+					dcs -> bn : bn_transmit_power_max \nsets config to BN in a group
+				end
+				group isRnTransmitPowerChanged : true
+					dcs -> bn : rn_transmit_power_max \nsets config to BN in a group
+				end
+ 		    end
+	nis -> user --
+	note left: response body \n ... \n ... \n rNTransmitPower \n bNTransmitPower
+end
+
+@enduml
